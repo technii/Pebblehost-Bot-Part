@@ -1,0 +1,8 @@
+discord[voice]
+uwsgi
+flask
+pillow
+waitress
+requests
+mysql.connector
+PyNaCl
