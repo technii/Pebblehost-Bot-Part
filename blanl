@@ -1,4 +1,6 @@
-@client.tree.command(name="imagetogif", description="Make a image to a gif")
+
+
+""" @client.tree.command(name="imagetogif", description="Make a image to a gif")
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @app_commands.user_install()
 async def _imagetogif(interaction: discord.Interaction, image: discord.Attachment ):
@@ -58,3 +60,4 @@ async def getfilename(link : str):
     linkparts2 = linkparts1[-1].split("?")
     name = f"images/{linkparts2[0]}"
     return name
+ """

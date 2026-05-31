@@ -6,3 +6,4 @@ waitress
 requests
 mysql.connector
 PyNaCl
+librosa
