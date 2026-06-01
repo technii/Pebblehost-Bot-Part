@@ -7,5 +7,4 @@ images = ["https://cdn.discordapp.com/attachments/1265740184931143785/1510412056
 @app.route("/")
 def home():
     image = images[random.randint(0,(len(images) - 1))]
-    print(f"someone visited your site at {str.split(datetime.now(timezone.utc).astimezone().isoformat(),"T")}")
     return render_template("index.html", image = image)
