@@ -9,13 +9,16 @@ import json
 import mysql.connector
 import nacl
 from mutagen.mp3 import MP3
+import ffmpeg
 jsonfile = open("token.json")
 jsondict : dict = json.load(jsonfile)
 allowedcontenttypes = ["audio/mpeg"]
 intents = discord.Intents.default()
 openvoiceclients = {}
 audiofp = "Sounds/"
-sqlforuploadingsounds = "INSERT INTO SOUNDPOINTERS (GUILDID,FILENAME,LENGTH,USERID,FileID) VALUES (%s,%s,%s,%s,%s) "
+sqlforuploadingsounds = "INSERT INTO SOUNDPOINTERS (GUILDID,FILENAME,LENGTH,USERID,SOUNDNAME,FileID) VALUES (%s,%s,%s,%s,%s,%s) "
+sqlforgettingsoundnames = "select SOUNDNAME, LENGTH from SOUNDPOINTERS "
+sqlforplayingsound = "select FILENAME from `SOUNDPOINTERS` where soundname = %s"
 
 db = mysql.connector.connect(
     host=jsondict.get("SQLHost"),
@@ -37,7 +40,32 @@ class sclient(discord.Client):
         
 client = sclient()
 
+class FruitSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Apple"),
+            discord.SelectOption(label="Banana"),
+            discord.SelectOption(label="Orange"),
+        ]
 
+        super().__init__(
+            placeholder="Choose a fruit...",
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(
+            f"You chose {self.values[0]}",
+            ephemeral=True
+        )
+
+class FruitView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        sqlcursor.execute(sqlforgettingsoundnames)
+        sql = sqlcursor.fetchall()
+        print(sql)
+        self.add_item(FruitSelect())
 
 
 @client.tree.command(name="joinvc")
@@ -60,13 +88,13 @@ async def _leavevc(interaction : discord.Interaction):
 
 @client.tree.command(name="uploadsound")
 @app_commands.allowed_contexts(guilds=True)
-async def _uploadsound(interaction : discord.Interaction, sound : discord.Attachment):
+async def _uploadsound(interaction : discord.Interaction, sound : discord.Attachment, soundname : str):
     try:
         if sound.content_type in allowedcontenttypes:
             sqlcursor.execute("SELECT `FileID` FROM SOUNDPOINTERS ORDER BY FileID DESC LIMIT 1")
             currentfileid : int  = int(str(sqlcursor.fetchone()).removeprefix("(").removesuffix(",)")) + 1
             await sound.save(fp=audiofp + str(interaction.guild.id) + str(currentfileid)+ ".mp3")
-            vals = (str(interaction.guild.id),sound.filename,str(MP3(audiofp + str(interaction.guild.id) + str(currentfileid)+ ".mp3").info.length),str(interaction.user.id),currentfileid)
+            vals = (str(interaction.guild.id),audiofp + str(interaction.guild.id) + str(currentfileid)+ ".mp3",str(MP3(audiofp + str(interaction.guild.id) + str(currentfileid)+ ".mp3").info.length),str(interaction.user.id),soundname,currentfileid)
             print(vals)
             
             sqlcursor.execute(sqlforuploadingsounds,vals)
@@ -83,7 +111,16 @@ async def _uploadsound(interaction : discord.Interaction, sound : discord.Attach
 @app_commands.allowed_contexts(guilds=True)
 async def _playsound(interaction : discord.Interaction, soundname: str):
     try:
-        pass
+        if interaction.guild.id in openvoiceclients:
+            sqlcursor.execute(f"select FILENAME from `SOUNDPOINTERS` where SOUNDNAME = '{soundname}'")
+            resp = sqlcursor.fetchall()
+            if resp.__len__() > 0:
+                print(resp)
+                await openvoiceclients[interaction.guild.id].play(discord.FFmpegOpusAudio(source=resp[0][0]))
+            else:
+                await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
+        else:
+            interaction.response.send_message("Not in a voice channel", ephemeral=True)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
@@ -91,7 +128,8 @@ async def _playsound(interaction : discord.Interaction, soundname: str):
 @app_commands.allowed_contexts(guilds=True)
 async def _soundlist(interaction : discord.Interaction):
     try:
-        print(currentfileid)
+        views = FruitView()
+        await interaction.response.send_message("press the button", view=views)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
