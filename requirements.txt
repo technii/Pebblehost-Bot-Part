@@ -1,4 +1,4 @@
-discord[voice]
+discord.py[voice]
 uwsgi
 flask
 pillow
@@ -8,3 +8,4 @@ mysql.connector
 PyNaCl
 mutagen
 ffmpeg
+pocket-tts

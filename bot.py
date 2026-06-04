@@ -33,11 +33,11 @@ jsonfile = open("token.json")
 jsondict : dict = json.load(jsonfile)
 allowedcontenttypes = ["audio/mpeg"]
 intents = discord.Intents.default()
-openvoiceclients = {}
+
 audiofp = "Sounds/"
 sqlforuploadingsounds = "INSERT INTO SOUNDPOINTERS (GUILDID,FILENAME,LENGTH,USERID,SOUNDNAME,FileID) VALUES (%s,%s,%s,%s,%s,%s) "
 sqlforgettingsoundnames = "select SOUNDNAME, LENGTH from SOUNDPOINTERS where GUILDID = %s"
-sqlforplayingsound = "select FILENAME,GUILDID from `SOUNDPOINTERS` where SOUNDNAME = %s AND GUILDID = %s"
+sqlforplayingsound = "select FILENAME,GUILDID,LENGTH from `SOUNDPOINTERS` where SOUNDNAME = %s AND GUILDID = %s"
 
 db = mysql.connector.connect(
     host=jsondict.get("SQLHost"),
@@ -86,9 +86,9 @@ class FruitView(discord.ui.LayoutView):
 @app_commands.allowed_contexts(guilds=True)
 async def _joinvc(interaction : discord.Interaction, channel : discord.VoiceChannel):
     try:
-        openvoiceclients[interaction.guild.id] = await channel.connect()
+        shared.voiceclients[interaction.guild.id] = await channel.connect()
         await interaction.response.send_message(f"joined {channel.name}",ephemeral=True)
-        shared.queues[interaction.guild.id] = shared.soundqueue()
+        await shared.CreateQueueWorker(guildID=interaction.guild.id)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
@@ -96,11 +96,13 @@ async def _joinvc(interaction : discord.Interaction, channel : discord.VoiceChan
 @app_commands.allowed_contexts(guilds=True)
 async def _leavevc(interaction : discord.Interaction):
     try:
-        await openvoiceclients[interaction.guild.id].disconnect()
+        await shared.voiceclients[interaction.guild.id].disconnect()
         await interaction.response.send_message(f"left :(",ephemeral=True)
-        openvoiceclients.pop(interaction.guild.id)
+        shared.voiceclients[interaction.guild.id].pop(interaction.guild.id)
+        shared.KillQueue(GuildID=interaction.guild.id)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
+
 
 @client.tree.command(name="uploadsound")
 @app_commands.allowed_contexts(guilds=True)
@@ -123,19 +125,29 @@ async def _uploadsound(interaction : discord.Interaction, sound : discord.Attach
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
+
+"""
+queue Template tuple ref = (Type,FilePath,Duration)
+queue TTS tuple ref = ("TTS",Text,Voice)
+queue SoundFile ref = ("SoundFile",FilePath,Duration)
+Accepted Types:
+    TTS: must be passed with the filepath being the one it can save too,and the duration is 1
+    SoundFile: as normal
+"""
+
 @client.tree.command(name="playsound")
 @app_commands.allowed_contexts(guilds=True)
 async def _playsound(interaction : discord.Interaction, soundname: str):
     try:
-        if interaction.guild.id in openvoiceclients:
+        if interaction.guild.id in shared.voiceclients:
             sqlcursor.execute(sqlforplayingsound,(soundname,interaction.guild.id))
-            resp = sqlcursor.fetchall()
+            resp = sqlcursor.fetchall()[0]
             print(resp)
             if resp.__len__() > 0:
                 print("resplen")
-                if resp[0][1] == str(interaction.guild.id):
+                if resp[1] == str(interaction.guild.id):
                     print("resp[1]")
-                    shared.queues[interaction.guild.id].soundq.put(resp[0][0])
+                    await shared.queues[interaction.guild.id].soundq.put(("SoundFile",resp[0],resp[2]))
                     print(shared.queues[interaction.guild.id].soundq.qsize())
                     await interaction.response.send_message("Put Into Queue",ephemeral=True)
                 else:
@@ -157,11 +169,7 @@ async def _soundlist(interaction : discord.Interaction):
         await interaction.response.send_message(e,ephemeral=True)
 
 async def PlayingQueue():
-    while True:
-        sleepdura:float
-        
-        
-        await asyncio.sleep(0)
+    pass
 
 
 

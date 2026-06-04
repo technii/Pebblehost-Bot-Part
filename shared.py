@@ -47,5 +47,4 @@ async def CreateQueueWorker(guildID):
     queuetasks[guildID] = asyncio.create_task(QueueWorker(queues[guildID]))
 
 async def KillQueue(GuildID):
-    await queuetasks[GuildID].join()
     queuetasks[GuildID].cancel()
