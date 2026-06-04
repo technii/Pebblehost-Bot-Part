@@ -91,8 +91,8 @@ async def _leavevc(interaction : discord.Interaction):
     try:
         await shared.voiceclients[interaction.guild.id].disconnect()
         await interaction.response.send_message(f"left :(",ephemeral=True)
-        shared.voiceclients[interaction.guild.id].pop(interaction.guild.id)
-        shared.KillQueue(GuildID=interaction.guild.id)
+        shared.voiceclients[interaction.guild.id] = None
+        await shared.KillQueue(GuildID=interaction.guild.id)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
