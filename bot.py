@@ -10,6 +10,25 @@ import mysql.connector
 import nacl
 from mutagen.mp3 import MP3
 import ffmpeg
+import shared
+import asyncio
+"""
+Completed Commands:
+JoinVC
+LeaveVC
+UploadSound
+PlaySound
+SoundList
+Work in Progress Commands:
+TTS
+Future Commands:
+Queue fixes
+StopSound
+SkipSound
+"""
+
+
+
 jsonfile = open("token.json")
 jsondict : dict = json.load(jsonfile)
 allowedcontenttypes = ["audio/mpeg"]
@@ -17,8 +36,8 @@ intents = discord.Intents.default()
 openvoiceclients = {}
 audiofp = "Sounds/"
 sqlforuploadingsounds = "INSERT INTO SOUNDPOINTERS (GUILDID,FILENAME,LENGTH,USERID,SOUNDNAME,FileID) VALUES (%s,%s,%s,%s,%s,%s) "
-sqlforgettingsoundnames = "select SOUNDNAME, LENGTH from SOUNDPOINTERS "
-sqlforplayingsound = "select FILENAME from `SOUNDPOINTERS` where soundname = %s"
+sqlforgettingsoundnames = "select SOUNDNAME, LENGTH from SOUNDPOINTERS where GUILDID = %s"
+sqlforplayingsound = "select FILENAME,GUILDID from `SOUNDPOINTERS` where SOUNDNAME = %s AND GUILDID = %s"
 
 db = mysql.connector.connect(
     host=jsondict.get("SQLHost"),
@@ -36,36 +55,31 @@ class sclient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
     async def setup_hook(self) -> None:
         await self.tree.sync()
+        asyncio.create_task(PlayingQueue())
         print(f"we have signed in as {client.user}")
         
 client = sclient()
 
-class FruitSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(label="Apple"),
-            discord.SelectOption(label="Banana"),
-            discord.SelectOption(label="Orange"),
-        ]
+class Container(discord.ui.Container):
+    def __init__(self, *children, accent_colour = None, accent_color = None, spoiler = False, id = None,TextLabelText:list):
+        TextLabelText = TextLabelText
+        super().__init__(*children, accent_colour=accent_colour, accent_color=accent_color, spoiler=spoiler, id=id)
+        for x in TextLabelText:
+            self.add_item(discord.ui.TextDisplay(x))
 
-        super().__init__(
-            placeholder="Choose a fruit...",
-            options=options
-        )
 
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            f"You chose {self.values[0]}",
-            ephemeral=True
-        )
 
-class FruitView(discord.ui.View):
-    def __init__(self):
+
+class FruitView(discord.ui.LayoutView):
+    def __init__(self,guildid):
         super().__init__()
-        sqlcursor.execute(sqlforgettingsoundnames)
+        sqlcursor.execute(f"select SOUNDNAME, LENGTH from SOUNDPOINTERS where GUILDID = {guildid} ")
         sql = sqlcursor.fetchall()
-        print(sql)
-        self.add_item(FruitSelect())
+        TextList = []
+        for x in sql:
+            TextList.append("Name: " + x[0] + " , Duration (Seconds): " + str(x[1]))
+        print(TextList)
+        self.add_item(Container(TextLabelText=TextList))
 
 
 @client.tree.command(name="joinvc")
@@ -74,6 +88,7 @@ async def _joinvc(interaction : discord.Interaction, channel : discord.VoiceChan
     try:
         openvoiceclients[interaction.guild.id] = await channel.connect()
         await interaction.response.send_message(f"joined {channel.name}",ephemeral=True)
+        shared.queues[interaction.guild.id] = shared.soundqueue()
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
@@ -83,6 +98,7 @@ async def _leavevc(interaction : discord.Interaction):
     try:
         await openvoiceclients[interaction.guild.id].disconnect()
         await interaction.response.send_message(f"left :(",ephemeral=True)
+        openvoiceclients.pop(interaction.guild.id)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
@@ -112,15 +128,22 @@ async def _uploadsound(interaction : discord.Interaction, sound : discord.Attach
 async def _playsound(interaction : discord.Interaction, soundname: str):
     try:
         if interaction.guild.id in openvoiceclients:
-            sqlcursor.execute(f"select FILENAME from `SOUNDPOINTERS` where SOUNDNAME = '{soundname}'")
+            sqlcursor.execute(sqlforplayingsound,(soundname,interaction.guild.id))
             resp = sqlcursor.fetchall()
+            print(resp)
             if resp.__len__() > 0:
-                print(resp)
-                await openvoiceclients[interaction.guild.id].play(discord.FFmpegOpusAudio(source=resp[0][0]))
+                print("resplen")
+                if resp[0][1] == str(interaction.guild.id):
+                    print("resp[1]")
+                    shared.queues[interaction.guild.id].soundq.put(resp[0][0])
+                    print(shared.queues[interaction.guild.id].soundq.qsize())
+                    await interaction.response.send_message("Put Into Queue",ephemeral=True)
+                else:
+                    await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
             else:
                 await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
         else:
-            interaction.response.send_message("Not in a voice channel", ephemeral=True)
+            await interaction.response.send_message("Not in a voice channel", ephemeral=True)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
@@ -128,12 +151,31 @@ async def _playsound(interaction : discord.Interaction, soundname: str):
 @app_commands.allowed_contexts(guilds=True)
 async def _soundlist(interaction : discord.Interaction):
     try:
-        views = FruitView()
-        await interaction.response.send_message("press the button", view=views)
+        views = FruitView(interaction.guild.id)
+        await interaction.response.send_message(view=views, ephemeral=True)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
+async def PlayingQueue():
+    while True:
+        sleepdura:float
+        
+        
+        await asyncio.sleep(0)
 
+
+
+"""
+old queueing 
+if openvoiceclients:
+            for x in openvoiceclients:
+                if x in shared.queues:
+                    if not shared.queues[x].soundq.empty():
+                        if not openvoiceclients[x].is_playing():
+                            print("QQQ")
+                            filepath = shared.queues[x].soundq.get()
+                            openvoiceclients[x].play(discord.FFmpegOpusAudio(filepath))"""       
+        
 
 def run_bot():
     client.run(jsondict.get("token"))
