@@ -1,15 +1,8 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-import PIL
-from PIL import Image
-import os
-import requests
 import json
 import mysql.connector
-import nacl
 from mutagen.mp3 import MP3
-import ffmpeg
 import shared
 import asyncio
 """
@@ -141,13 +134,13 @@ async def _playsound(interaction : discord.Interaction, soundname: str):
     try:
         if interaction.guild.id in shared.voiceclients:
             sqlcursor.execute(sqlforplayingsound,(soundname,interaction.guild.id))
-            resp = sqlcursor.fetchall()[0]
+            resp = sqlcursor.fetchall()
             print(resp)
             if resp.__len__() > 0:
                 print("resplen")
-                if resp[1] == str(interaction.guild.id):
+                if resp[0][1] == str(interaction.guild.id):
                     print("resp[1]")
-                    await shared.queues[interaction.guild.id].soundq.put(("SoundFile",resp[0],resp[2]))
+                    await shared.queues[interaction.guild.id].soundq.put(("SoundFile",resp[0][0],resp[0][2]))
                     print(shared.queues[interaction.guild.id].soundq.qsize())
                     await interaction.response.send_message("Put Into Queue",ephemeral=True)
                 else:
