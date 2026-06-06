@@ -179,9 +179,9 @@ async def _PlayTTS(interaction : discord.Interaction, voice : shared.TTSVoices,t
 @app_commands.allowed_contexts(guilds=True)
 async def _Skip(interaction : discord.Interaction):
     try:
-        if shared.queues[interaction.guild.id].is_playing():
-            shared.queues[interaction.guild.id].stop()
-            await interaction.response.send_message("Stopped!",ephemeral=True)
+        if shared.queues[interaction.guild.id].voiceclient.is_playing():
+            shared.queues[interaction.guild.id].voiceclient.stop()
+            await interaction.response.send_message("Skipped!",ephemeral=True)
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
