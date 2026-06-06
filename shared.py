@@ -2,7 +2,7 @@ import asyncio
 import discord
 from piper import PiperVoice
 import wave
-from enum import Enum
+from enum import StrEnum
 import os
 """
 queue Template tuple ref = (Type,FilePath,Duration)
@@ -19,7 +19,7 @@ queuetasks = {}
 voiceclients = {}
 
 
-class TTSVoices(Enum):
+class TTSVoices(StrEnum):
     alan ="TTSvoices/en_GB-alan-medium.onnx"
     cori ="TTSvoices/en_GB-cori-medium.onnx"
     southwoman = "TTSvoices/en_GB-southern_english_female-low.onnx"
