@@ -2,6 +2,8 @@ import asyncio
 import discord
 from piper import PiperVoice
 import wave
+import enum
+import os
 """
 queue Template tuple ref = (Type,FilePath,Duration)
 queue TTS tuple ref = ("TTS",Text,Voice)
@@ -16,15 +18,22 @@ queues = {}
 queuetasks = {}
 voiceclients = {}
 
+
+class TTSVoices(enum.StrEnum):
+    alan ="TTSvoices/en_GB-alan-medium.onnx"
+    cori ="TTSvoices/en_GB-cori-medium.onnx"
+    southwoman = "TTSvoices/en_GB-southern_english_female-low.onnx"
+    VCTK = "TTSvoices/en_GB-vctk-medium.onnx"
+    lessac = "TTSvoices/en_US-lessac-medium.onnx"
+    norman = "TTSvoices/en_US-norman-medium.onnx"
+
 class soundqueue():
     
     def __init__(self,guildid:int,VoiceClient : discord.VoiceClient):
         self.guildid : int = guildid
         self.soundq = asyncio.Queue()
         self.voiceclient : discord.VoiceClient = VoiceClient
-
-async def GenerateTTS(TextString, Voice):
-        pass
+        self.ttsnum = 0
 
 
 async def QueueWorker(queue : soundqueue):
@@ -33,8 +42,14 @@ async def QueueWorker(queue : soundqueue):
         try:
             triple = await queue.soundq.get()
             if triple[0] == "TTS":
-                soundfile = GenerateTTS(triple[1],triple[2])
-                queue.soundq.task_done()
+                queue.tssnum = queue.ttsnum + 1
+                soundfile = await GenerateTTS(triple[2],triple[1],queue.guildid,queue.ttsnum)
+                finished = asyncio.Event()
+                queue.voiceclient.play(discord.FFmpegOpusAudio(soundfile),after=lambda e: finished.set())
+                await finished.wait()
+                if not queue.voiceclient.is_playing():
+                    os.remove(soundfile)
+                    queue.soundq.task_done()
             elif triple[0] == "SoundFile":
                 finished = asyncio.Event()
                 queue.voiceclient.play(discord.FFmpegOpusAudio(triple[1]),after=lambda e: finished.set())
@@ -51,11 +66,12 @@ async def CreateQueueWorker(guildID):
     queues[guildID] = soundqueue(guildID,voiceclients[guildID])
     queuetasks[guildID] = asyncio.create_task(QueueWorker(queues[guildID]))
 
-async def GenerateTTSModels():
-    voice = PiperVoice.load("TTSvoices/en_US-lessac-medium.onnx")
-    with wave.open("TTS/test.wav", "wb") as wav_file:
-        voice.synthesize_wav("Welcome to the world of speech synthesis!", wav_file)
-    return
+async def GenerateTTS(Voice : str,Text : str,GuildID,num : int) -> str:
+    voice = PiperVoice.load(Voice)
+    filename =  "TTS/"+ str(GuildID) + str(num) + ".wav"
+    with wave.open(filename, "wb") as wav_file:
+        voice.synthesize_wav(Text, wav_file)
+    return filename
 
 async def KillQueue(GuildID):
     queuetasks[GuildID].cancel()

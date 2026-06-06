@@ -4,7 +4,6 @@ import json
 import mysql.connector
 from mutagen.mp3 import MP3
 import shared
-import asyncio
 """
 Completed Commands:
 JoinVC
@@ -143,7 +142,6 @@ async def _playsound(interaction : discord.Interaction, soundname: str):
                 if resp[0][1] == str(interaction.guild.id):
                     print("resp[1]")
                     await shared.queues[interaction.guild.id].soundq.put(("SoundFile",resp[0][0],resp[0][2]))
-                    print(shared.queues[interaction.guild.id].soundq.qsize())
                     await interaction.response.send_message("Put Into Queue",ephemeral=True)
                 else:
                     await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
@@ -165,10 +163,18 @@ async def _soundlist(interaction : discord.Interaction):
 
 @client.tree.command(name="playtts")
 @app_commands.allowed_contexts(guilds=True)
-async def _PlayTTS(interaction : discord.Interaction):
-    await shared.GenerateTTSModels()
-    await interaction.response.send_message("Done")    
 
+async def _PlayTTS(interaction : discord.Interaction, voice : shared.TTSVoices,text: str):
+    try:
+        guildid = interaction.guild.id
+        print(voice)
+        if guildid in shared.voiceclients:
+            await shared.queues[guildid].soundq.put(("TTS",text,voice))
+            await interaction.response.send_message("Put into queue",ephemeral=True)
+        else:
+            await interaction.response.send_message("Not in Voice Channel", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(e,ephemeral=True)
 @client.tree.command(name="skip")
 @app_commands.allowed_contexts(guilds=True)
 async def _Skip(interaction : discord.Interaction):

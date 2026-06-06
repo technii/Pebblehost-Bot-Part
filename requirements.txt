@@ -1,6 +1,5 @@
 discord.py[voice]
 flask
-pillow
 requests
 waitress
 mysql.connector
