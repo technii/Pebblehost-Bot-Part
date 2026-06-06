@@ -178,17 +178,28 @@ async def _PlayTTS(interaction : discord.Interaction, voice : shared.TTSVoices,t
 @client.tree.command(name="skip")
 @app_commands.allowed_contexts(guilds=True)
 async def _Skip(interaction : discord.Interaction):
-    pass
+    try:
+        if shared.queues[interaction.guild.id].is_playing():
+            shared.queues[interaction.guild.id].stop()
+            await interaction.response.send_message("Stopped!",ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(e,ephemeral=True)
 
 @client.tree.command(name="pause")
 @app_commands.allowed_contexts(guilds=True)
 async def _Pause(interaction : discord.Interaction):
-    pass
+    try:
+        pass
+    except Exception as e:
+        await interaction.response.send_message(e,ephemeral=True)
 
 @client.tree.command(name="changemode")
 @app_commands.allowed_contexts(guilds=True)
 async def _ChangeMode(interaction : discord.Interaction):
-    pass
+    try:
+        pass
+    except Exception as e:
+        await interaction.response.send_message(e,ephemeral=True)
 
 
 """
