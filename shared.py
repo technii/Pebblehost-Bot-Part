@@ -1,7 +1,7 @@
 import asyncio
 import discord
-from pocket_tts import TTSModel
-import scipy.io.wavfile
+from piper import PiperVoice
+import wave
 """
 queue Template tuple ref = (Type,FilePath,Duration)
 queue TTS tuple ref = ("TTS",Text,Voice)
@@ -52,10 +52,9 @@ async def CreateQueueWorker(guildID):
     queuetasks[guildID] = asyncio.create_task(QueueWorker(queues[guildID]))
 
 async def GenerateTTSModels():
-    ttsmodeltest = TTSModel.load_model()
-    ttsmodelvoicestate = ttsmodeltest.get_state_for_audio_prompt("alba")
-    audio = ttsmodeltest.generate_audio(ttsmodelvoicestate, "TESTING, testing, fat chud gooner lmao")
-    scipy.io.wavfile.write("TTS/output.wav",ttsmodeltest.sample_rate,audio.numpy())
+    voice = PiperVoice.load("TTSvoices/en_US-lessac-medium.onnx")
+    with wave.open("TTS/test.wav", "wb") as wav_file:
+        voice.synthesize_wav("Welcome to the world of speech synthesis!", wav_file)
     return
 
 async def KillQueue(GuildID):

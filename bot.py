@@ -163,23 +163,23 @@ async def _soundlist(interaction : discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
-@client.tree.command(name="PlayTTS")
+@client.tree.command(name="playtts")
 @app_commands.allowed_contexts(guilds=True)
 async def _PlayTTS(interaction : discord.Interaction):
     await shared.GenerateTTSModels()
     await interaction.response.send_message("Done")    
 
-@client.tree.command(name="Skip")
+@client.tree.command(name="skip")
 @app_commands.allowed_contexts(guilds=True)
 async def _Skip(interaction : discord.Interaction):
     pass
 
-@client.tree.command(name="Pause")
+@client.tree.command(name="pause")
 @app_commands.allowed_contexts(guilds=True)
 async def _Pause(interaction : discord.Interaction):
     pass
 
-@client.tree.command(name="ChangeMode")
+@client.tree.command(name="changemode")
 @app_commands.allowed_contexts(guilds=True)
 async def _ChangeMode(interaction : discord.Interaction):
     pass
