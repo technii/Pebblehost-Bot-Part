@@ -12,10 +12,10 @@ LeaveVC
 UploadSound
 PlaySound
 SoundList
+Queue fixes
 Work in Progress Commands:
 TTS
 Future Commands:
-Queue fixes
 StopSound
 SkipSound
 """
@@ -24,10 +24,11 @@ SkipSound
 
 jsonfile = open("token.json")
 jsondict : dict = json.load(jsonfile)
-allowedcontenttypes = ["audio/mpeg"]
+allowedcontenttypes = ["audio/mpeg3"]
 intents = discord.Intents.default()
 
 audiofp = "Sounds/"
+ttsfp = "TTS/"
 sqlforuploadingsounds = "INSERT INTO SOUNDPOINTERS (GUILDID,FILENAME,LENGTH,USERID,SOUNDNAME,FileID) VALUES (%s,%s,%s,%s,%s,%s) "
 sqlforgettingsoundnames = "select SOUNDNAME, LENGTH from SOUNDPOINTERS where GUILDID = %s"
 sqlforplayingsound = "select FILENAME,GUILDID,LENGTH from `SOUNDPOINTERS` where SOUNDNAME = %s AND GUILDID = %s"
@@ -48,7 +49,7 @@ class sclient(discord.Client):
         self.tree = discord.app_commands.CommandTree(self)
     async def setup_hook(self) -> None:
         await self.tree.sync()
-        asyncio.create_task(PlayingQueue())
+
         print(f"we have signed in as {client.user}")
         
 client = sclient()
@@ -114,6 +115,7 @@ async def _uploadsound(interaction : discord.Interaction, sound : discord.Attach
             
         else:
             await interaction.response.send_message("Must be a .mp3", ephemeral=True)
+            print(sound.content_type)
 
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
@@ -161,9 +163,26 @@ async def _soundlist(interaction : discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
-async def PlayingQueue():
+@client.tree.command(name="PlayTTS")
+@app_commands.allowed_contexts(guilds=True)
+async def _PlayTTS(interaction : discord.Interaction):
+    await shared.GenerateTTSModels()
+    await interaction.response.send_message("Done")    
+
+@client.tree.command(name="Skip")
+@app_commands.allowed_contexts(guilds=True)
+async def _Skip(interaction : discord.Interaction):
     pass
 
+@client.tree.command(name="Pause")
+@app_commands.allowed_contexts(guilds=True)
+async def _Pause(interaction : discord.Interaction):
+    pass
+
+@client.tree.command(name="ChangeMode")
+@app_commands.allowed_contexts(guilds=True)
+async def _ChangeMode(interaction : discord.Interaction):
+    pass
 
 
 """
