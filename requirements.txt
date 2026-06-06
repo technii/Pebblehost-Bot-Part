@@ -5,4 +5,5 @@ requests
 mysql.connector
 PyNaCl
 ffmpeg
+mutagen
 pocket-tts
