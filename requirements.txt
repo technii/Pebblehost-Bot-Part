@@ -1,11 +1,8 @@
 discord.py[voice]
-uwsgi
 flask
 pillow
-waitress
 requests
 mysql.connector
 PyNaCl
-mutagen
 ffmpeg
 pocket-tts
