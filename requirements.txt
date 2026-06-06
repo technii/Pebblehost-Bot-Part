@@ -7,4 +7,4 @@ mysql.connector
 PyNaCl
 ffmpeg
 mutagen
-pocket-tts
+piper-tts
