@@ -17,6 +17,7 @@ ttsmodelvoicestate = None
 queues = {}
 queuetasks = {}
 voiceclients = {}
+queuecontents = {}
 
 
 class TTSVoices(StrEnum):
@@ -49,12 +50,14 @@ async def QueueWorker(queue : soundqueue):
                 await finished.wait()
                 if not queue.voiceclient.is_playing():
                     os.remove(soundfile)
+                    queuecontents[queue.guildid].pop(0)
                     queue.soundq.task_done()
             elif triple[0] == "SoundFile":
                 finished = asyncio.Event()
                 queue.voiceclient.play(discord.FFmpegOpusAudio(triple[1]),after=lambda e: finished.set())
                 await finished.wait()
                 if not queue.voiceclient.is_playing():
+                    queuecontents[queue.guildid].pop(0)
                     queue.soundq.task_done()
             else:
                 raise ValueError("Invalid Type for queue Check supported types in the shared.py lines 4-10 ")
@@ -65,6 +68,7 @@ async def QueueWorker(queue : soundqueue):
 async def CreateQueueWorker(guildID):
     queues[guildID] = soundqueue(guildID,voiceclients[guildID])
     queuetasks[guildID] = asyncio.create_task(QueueWorker(queues[guildID]))
+    queuecontents[guildID] = []
 
 async def GenerateTTS(Voice : str,Text : str,GuildID,num : int) -> str:
     voice = PiperVoice.load(Voice)

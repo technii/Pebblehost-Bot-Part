@@ -74,6 +74,21 @@ class FruitView(discord.ui.LayoutView):
         print(TextList)
         self.add_item(Container(TextLabelText=TextList))
 
+class QueueContainer(discord.ui.Container):
+    def __init__(self, *children, accent_colour = None, accent_color = None, spoiler = False, id = None,queuecontents:list):
+        queuecontents = queuecontents
+        super().__init__(*children, accent_colour=accent_colour, accent_color=accent_color, spoiler=spoiler, id=id)
+        for x in queuecontents:
+            self.add_item(discord.ui.TextDisplay(x))
+
+class QueueView(discord.ui.LayoutView):
+    def __init__(self, queuecontentsarray):
+        super().__init__()
+        self.add_item(queuecontentsarray)
+        
+
+
+        
 
 @client.tree.command(name="joinvc")
 @app_commands.allowed_contexts(guilds=True)
@@ -133,18 +148,18 @@ Accepted Types:
 @app_commands.allowed_contexts(guilds=True)
 async def _playsound(interaction : discord.Interaction, soundname: str):
     try:
-        if interaction.guild.id in shared.voiceclients:
-            sqlcursor.execute(sqlforplayingsound,(soundname,interaction.guild.id))
+        GuildID = interaction.guild.id
+        if GuildID in shared.voiceclients:
+            sqlcursor.execute(sqlforplayingsound,(soundname,GuildID))
             resp = sqlcursor.fetchall()
             print(resp)
             if resp.__len__() > 0:
                 print("resplen")
-                if resp[0][1] == str(interaction.guild.id):
-                    print("resp[1]")
-                    await shared.queues[interaction.guild.id].soundq.put(("SoundFile",resp[0][0],resp[0][2]))
-                    await interaction.response.send_message("Put Into Queue",ephemeral=True)
-                else:
-                    await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
+                print("resp[1]")
+                await shared.queues[GuildID].soundq.put(("SoundFile",resp[0][0],resp[0][2]))
+                shared.queuecontents[GuildID].append(soundname)
+                await interaction.response.send_message("Put Into Queue",ephemeral=True)
+                await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
             else:
                 await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
         else:
@@ -170,6 +185,7 @@ async def _PlayTTS(interaction : discord.Interaction, voice : shared.TTSVoices,t
         print(voice)
         if guildid in shared.voiceclients:
             await shared.queues[guildid].soundq.put(("TTS",text,voice))
+            shared.queuecontents[guildid].append("TTS: " + text)
             await interaction.response.send_message("Put into queue",ephemeral=True)
         else:
             await interaction.response.send_message("Not in Voice Channel", ephemeral=True)
@@ -198,6 +214,14 @@ async def _Pause(interaction : discord.Interaction):
 async def _ChangeMode(interaction : discord.Interaction):
     try:
         pass
+    except Exception as e:
+        await interaction.response.send_message(e,ephemeral=True)
+
+@client.tree.command(name="viewqueue")
+@app_commands.allowed_contexts(guilds=True)
+async def _ViewQueue(interaction : discord.Interaction):
+    try:
+        interaction.response.send_message(view=QueueView(shared.queuecontents[interaction.guild.id]))
     except Exception as e:
         await interaction.response.send_message(e,ephemeral=True)
 
