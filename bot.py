@@ -159,7 +159,6 @@ async def _playsound(interaction : discord.Interaction, soundname: str):
                 await shared.queues[GuildID].soundq.put(("SoundFile",resp[0][0],resp[0][2]))
                 shared.queuecontents[GuildID].append(soundname)
                 await interaction.response.send_message("Put Into Queue",ephemeral=True)
-                await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
             else:
                 await interaction.response.send_message("No Sound Matching Name",ephemeral=True)
         else:
